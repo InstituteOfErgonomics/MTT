@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="LAYOUT_BG">#ff000000</color>
+    <color name="GRADIENT_1">#ccffff00</color>
+    <color name="GRADIENT_2">#80000000</color>
+    <color name="CROSS">#ff0000ff</color>
+    <color name="CIRCLE">#ffffff00</color>
+    <color name="FONTCOLOR">#ffcccccc</color>
+</resources>

@@ -1,0 +1,1 @@
+Y:\AndroidstudioProjects\mtt\app\build\intermediates\classes\debug
