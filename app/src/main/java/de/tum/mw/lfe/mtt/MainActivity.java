@@ -20,6 +20,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
@@ -48,6 +49,8 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -60,6 +63,7 @@ import android.widget.Toast;
 //------------------------------------------------------
 //Version	Date			Author				Mod
 //1			Oct, 2014		Michael Krause		initial
+//1.1		Aug, 2016		Michael Krause		added live view RMSE
 //------------------------------------------------------
 
 /*
@@ -105,7 +109,7 @@ public class MainActivity extends Activity implements SensorEventListener{
 	public static final String FOLDER_DATE_STR = "yyyy-MM-dd";//logging folder format
 	public static final String FILE_EXT = ".txt";
 	public static final String HEADER ="timestamp;x;y;diffRoll;diffPitch;RMSE_X;RMSE_Y;RMSE";
-	public static final String HEADER_CONFIG ="timestamp;flatCheckBox;neutral[0];neutral[1];neutral[2];sensitivityProgressBar;sensitivityX;sensitivityY;instabilityProgressBar;instabilityX;instabilityY;twoDimensional;swapXY;invertX;invertY;softwareVersion;";
+	public static final String HEADER_CONFIG ="timestamp;flatCheckBox;neutral[0];neutral[1];neutral[2];sensitivityProgressBar;sensitivityX;sensitivityY;instabilityProgressBar;instabilityX;instabilityY;twoDimensional;swapXY;invertX;invertY;liveViewEnabled;liveViewRotation;softwareVersion;";
 	    
 	//stats
 	 private long mLastExperimentDuration = 0;
@@ -296,12 +300,13 @@ public class MainActivity extends Activity implements SensorEventListener{
             ImageView left = (ImageView)findViewById(R.id.gradientLeft);
             ImageView right = (ImageView)findViewById(R.id.gradientRight);
             ImageView temp = new ImageView(getBaseContext());
-            
+
+    	    /*
+    	    //swap visual indicators
     	    CheckBox swapCheckBox = (CheckBox)findViewById(R.id.swapCheckBox);
     	    CheckBox invertXCheckBox = (CheckBox)findViewById(R.id.invertXCheckBox);
     	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
-     
-    	    /*
+
         	if (swapCheckBox.isChecked()){//swap x and y axis
                 up = (ImageView)findViewById(R.id.gradientRight);	
         		right = (ImageView)findViewById(R.id.gradientTop);       		
@@ -379,7 +384,9 @@ public class MainActivity extends Activity implements SensorEventListener{
              calculateInstability();
 
              moveCross(getX(), getY());
-             
+
+
+
              if(mIsExperimentRunning){
             	 logData((float)diffRoll,(float)diffPitch);
              }
@@ -621,6 +628,8 @@ public class MainActivity extends Activity implements SensorEventListener{
     	    CheckBox swapCheckBox = (CheckBox)findViewById(R.id.swapCheckBox);
     	    CheckBox invertXCheckBox = (CheckBox)findViewById(R.id.invertXCheckBox);
     	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
+			CheckBox liveViewCheckBox = (CheckBox)findViewById(R.id.liveViewCheckBox);
+			TextView liveViewTextView = (TextView)findViewById(R.id.liveViewTextView);
      
 
         	if (flatPositionCheckBox.isChecked()){
@@ -665,8 +674,35 @@ public class MainActivity extends Activity implements SensorEventListener{
             	            	
             	mInstability.handleMovementControlInput((roll -neutralRoll),(pitch-neutralPitch));
 
-            }
-        	
+
+				if (liveViewCheckBox.isChecked()){
+					liveViewTextView.setVisibility(View.VISIBLE);
+
+					liveViewTextView.setText(Long.toString(Math.round(mInstability.getRMSE())));//refresh RMSE result
+
+					//rotate textview
+					RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
+					float textRotation = 0;
+					switch (getSelectedIndexFromRadioGroup(liveViewRotationRadioGroup)) {
+						case 0:  textRotation = 0;
+							break;
+						case 1:  textRotation = 90;
+							break;
+						case 2:  textRotation = 180;
+							break;
+						case 3:  textRotation = 270;
+							break;
+						default: textRotation = 0;
+							break;
+					}
+					if (Build.VERSION.SDK_INT >= 11){
+						liveViewTextView.setRotation(textRotation);
+					}
+				}else{//!(liveViewCheckBox.isChecked())
+					liveViewTextView.setVisibility(View.INVISIBLE);
+				}
+			}
+
         }
     }
 	
@@ -761,10 +797,12 @@ public class MainActivity extends Activity implements SensorEventListener{
    	    CheckBox twoDimCheckBox = (CheckBox) findViewById (R.id.twoDimCheckBox);
 	    CheckBox swapCheckBox = (CheckBox)findViewById(R.id.swapCheckBox);
 	    CheckBox invertXCheckBox = (CheckBox)findViewById(R.id.invertXCheckBox);
-	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);  	    
-   	    
-		 
-		 StringBuilder log = new StringBuilder(2048);
+	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
+		CheckBox liveViewCheckBox = (CheckBox)findViewById(R.id.liveViewCheckBox);
+		RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
+
+
+		StringBuilder log = new StringBuilder(2048);
 		 log.append(HEADER_CONFIG);
 		 log.append(CSV_LINE_END);
 		 log.append(now);
@@ -795,7 +833,11 @@ public class MainActivity extends Activity implements SensorEventListener{
 		 log.append(CSV_DELIMITER);
 		 log.append(invertXCheckBox.isChecked());
 		 log.append(CSV_DELIMITER);
-		 log.append(invertXCheckBox.isChecked());
+		 log.append(invertYCheckBox.isChecked());
+		 log.append(CSV_DELIMITER);
+		 log.append(liveViewCheckBox.isChecked());
+		 log.append(CSV_DELIMITER);
+		 log.append(getSelectedIndexFromRadioGroup(liveViewRotationRadioGroup));
 		 log.append(CSV_DELIMITER);
 		 log.append(getVersionString());
 		 log.append(CSV_DELIMITER);
@@ -986,7 +1028,15 @@ public class MainActivity extends Activity implements SensorEventListener{
     	
 
 	}
-	
+
+	private int getSelectedIndexFromRadioGroup(RadioGroup rg){//helper get index of selected radio button e.g. first radio button is selected => 0
+		int radioButtonID = rg.getCheckedRadioButtonId();
+		View radioButton = rg.findViewById(radioButtonID);
+		int radioButtonIdx = rg.indexOfChild(radioButton);
+		return radioButtonIdx;
+
+	}
+
 	private void loadPreferences(){
 		//load from preferences
 	    SharedPreferences settings = getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
@@ -996,7 +1046,7 @@ public class MainActivity extends Activity implements SensorEventListener{
 	    flatPositionCheckBox.setChecked(settings.getBoolean("flatPositionCheckBox", true));
 	    
 	    
-	    //mNeutral;
+	    //mNeutralPosition;
 	    mNeutral[0] = settings.getFloat("mNeutral0", 0f);
 	    mNeutral[1] = settings.getFloat("mNeutral1", 0f);
 	    mNeutral[2] = settings.getFloat("mNeutral2", 0f);
@@ -1026,7 +1076,19 @@ public class MainActivity extends Activity implements SensorEventListener{
 	    //invertYCheckBox
 	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);	    
 	    invertYCheckBox.setChecked(settings.getBoolean("invertYCheckBox", false));
-	    
+
+		//liveViewCheckBox
+		CheckBox liveViewCheckBox = (CheckBox)findViewById(R.id.liveViewCheckBox);
+		liveViewCheckBox.setChecked(settings.getBoolean("liveViewCheckBox", false));
+
+		//liveViewRotation
+		int radioButtonIdx = settings.getInt("liveViewRotationRadioGroup", 0);
+		RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
+		((RadioButton)liveViewRotationRadioGroup.getChildAt(radioButtonIdx)).setChecked(true);
+
+
+
+
 	    //experiment stats
 	    mLastExperimentDuration = settings.getLong("mLastExperimentDuration", 0);
 	    mLastExperimentRMSE_X = settings.getFloat("mLastExperimentRMSE_X", 0f);
@@ -1072,8 +1134,17 @@ public class MainActivity extends Activity implements SensorEventListener{
 	    //invertYCheckBox
 	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
 	    editor.putBoolean("invertYCheckBox", invertYCheckBox.isChecked());
-	    
-	    
+
+		//liveViewCheckBox
+		CheckBox liveViewCheckBox = (CheckBox)findViewById(R.id.liveViewCheckBox);
+		editor.putBoolean("liveViewCheckBox", liveViewCheckBox.isChecked());
+
+		//liveViewRotation
+		RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
+		int radioButtonIdx = getSelectedIndexFromRadioGroup(liveViewRotationRadioGroup);
+		editor.putInt("liveViewRotationRadioGroup", radioButtonIdx);
+
+
 	    //experiment stats
 		 editor.putLong("mLastExperimentDuration", mLastExperimentDuration);
 		 editor.putFloat("mLastExperimentRMSE_X", mLastExperimentRMSE_X);

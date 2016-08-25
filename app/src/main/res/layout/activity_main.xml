@@ -10,6 +10,20 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".MainActivity" >
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="--"
+        android:id="@+id/liveViewTextView"
+        android:textColor="#ffffff"
+        android:layout_alignParentTop="false"
+        android:layout_alignParentLeft="false"
+        android:layout_alignParentRight="true"
+        android:layout_margin="20dp"
+        android:textSize="50dp"
+        android:layout_alignParentBottom="true" />
+
     <ImageView
         android:id="@+id/gradientTop"
         android:layout_width="fill_parent"
@@ -187,13 +201,60 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="invert y axis"
-                android:textColor="@color/FONTCOLOR" />             
+                android:textColor="@color/FONTCOLOR"
+                android:checked="false" />
             <View
                 android:layout_width="fill_parent"
                 android:layout_height="1dp"
-                android:background="@color/FONTCOLOR" /> 
-                
-            </LinearLayout>
+                android:background="@color/FONTCOLOR" />
+            <CheckBox
+                android:id="@+id/liveViewCheckBox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="show RMSE result live"
+                android:textColor="@color/FONTCOLOR" />
+
+            <RadioGroup
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/liveViewRotationRadioGroup"
+                android:longClickable="false">
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 deg"
+                    android:id="@+id/liveView0"
+                    android:textColor="#ffffff" />
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="90 deg"
+                    android:id="@+id/liveView90"
+                    android:textColor="#ffffff" />
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="180 deg"
+                    android:id="@+id/liveView180"
+                    android:textColor="#ffffff" />
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="270 deg"
+                    android:id="@+id/liveView270"
+                    android:textColor="#ffffff" />
+            </RadioGroup>
+
+            <View
+                android:layout_width="fill_parent"
+                android:layout_height="1dp"
+                android:background="@color/FONTCOLOR" />
+
+        </LinearLayout>
     </ScrollView>
 
 </RelativeLayout>
