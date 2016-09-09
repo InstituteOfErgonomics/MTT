@@ -23,6 +23,7 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.app.Activity;
@@ -34,6 +35,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.os.Vibrator;
 import android.text.Html;
 import android.text.SpannableString;
 import android.text.method.LinkMovementMethod;
@@ -49,6 +51,7 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.NumberPicker;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
@@ -64,6 +67,7 @@ import android.widget.Toast;
 //Version	Date			Author				Mod
 //1			Oct, 2014		Michael Krause		initial
 //1.1		Aug, 2016		Michael Krause		added live view RMSE
+//1.2		Sept,2016		Michael Krause		added timeout/timelimit
 //------------------------------------------------------
 
 /*
@@ -90,8 +94,8 @@ public class MainActivity extends Activity implements SensorEventListener{
 	private PowerManager.WakeLock mWakeLock;	
 	
 	private AlertDialog mAlert; //screen menue / start dialog
-	
-	
+
+	private Handler mHandler = new Handler();
 	private Thread mThread;
 	private Instability mInstability;
 
@@ -109,7 +113,7 @@ public class MainActivity extends Activity implements SensorEventListener{
 	public static final String FOLDER_DATE_STR = "yyyy-MM-dd";//logging folder format
 	public static final String FILE_EXT = ".txt";
 	public static final String HEADER ="timestamp;x;y;diffRoll;diffPitch;RMSE_X;RMSE_Y;RMSE";
-	public static final String HEADER_CONFIG ="timestamp;flatCheckBox;neutral[0];neutral[1];neutral[2];sensitivityProgressBar;sensitivityX;sensitivityY;instabilityProgressBar;instabilityX;instabilityY;twoDimensional;swapXY;invertX;invertY;liveViewEnabled;liveViewRotation;softwareVersion;";
+	public static final String HEADER_CONFIG ="timestamp;flatCheckBox;neutral[0];neutral[1];neutral[2];sensitivityProgressBar;sensitivityX;sensitivityY;instabilityProgressBar;instabilityX;instabilityY;twoDimensional;swapXY;invertX;invertY;liveViewEnabled;liveViewRotation;timeoutCheckBox,timeoutSeconds;softwareVersion;";
 	    
 	//stats
 	 private long mLastExperimentDuration = 0;
@@ -266,6 +270,9 @@ public class MainActivity extends Activity implements SensorEventListener{
 		 }
 		 
 		 public void stopExperiment(){
+
+			 mHandler.removeCallbacks(timeout);//if a timeout is pending, remove.
+
 			 if(mIsExperimentRunning){
 				 mIsExperimentRunning = false;
 				 //copy stat values to parent
@@ -800,7 +807,8 @@ public class MainActivity extends Activity implements SensorEventListener{
 	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
 		CheckBox liveViewCheckBox = (CheckBox)findViewById(R.id.liveViewCheckBox);
 		RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
-
+		CheckBox timeoutCheckBox = (CheckBox)findViewById(R.id.timeoutCheckBox);
+		NumberPicker timeoutNumberPicker = (NumberPicker)findViewById(R.id.timeoutNumberPicker);
 
 		StringBuilder log = new StringBuilder(2048);
 		 log.append(HEADER_CONFIG);
@@ -838,6 +846,10 @@ public class MainActivity extends Activity implements SensorEventListener{
 		 log.append(liveViewCheckBox.isChecked());
 		 log.append(CSV_DELIMITER);
 		 log.append(getSelectedIndexFromRadioGroup(liveViewRotationRadioGroup));
+		 log.append(CSV_DELIMITER);
+		 log.append(timeoutCheckBox.isChecked());
+		 log.append(CSV_DELIMITER);
+		 log.append(timeoutNumberPicker.getValue());
 		 log.append(CSV_DELIMITER);
 		 log.append(getVersionString());
 		 log.append(CSV_DELIMITER);
@@ -1086,7 +1098,15 @@ public class MainActivity extends Activity implements SensorEventListener{
 		RadioGroup liveViewRotationRadioGroup = (RadioGroup)findViewById(R.id.liveViewRotationRadioGroup);
 		((RadioButton)liveViewRotationRadioGroup.getChildAt(radioButtonIdx)).setChecked(true);
 
+		//timeoutCheckBox
+		CheckBox timeoutCheckBox = (CheckBox)findViewById(R.id.timeoutCheckBox);
+		timeoutCheckBox.setChecked(settings.getBoolean("timeoutCheckBox", false));
 
+		//timeoutNumberpicker
+		NumberPicker timeoutNumberPicker = (NumberPicker)findViewById(R.id.timeoutNumberPicker);
+		timeoutNumberPicker.setMinValue(1);
+		timeoutNumberPicker.setMaxValue(900);
+		timeoutNumberPicker.setValue(settings.getInt("timeoutNumberPicker", 60));
 
 
 	    //experiment stats
@@ -1145,7 +1165,16 @@ public class MainActivity extends Activity implements SensorEventListener{
 		editor.putInt("liveViewRotationRadioGroup", radioButtonIdx);
 
 
-	    //experiment stats
+		//timeoutCheckBox
+		CheckBox timeoutCheckBox = (CheckBox)findViewById(R.id.timeoutCheckBox);
+		editor.putBoolean("timeoutCheckBox", timeoutCheckBox.isChecked());
+
+		//timeoutNumberpicker
+		NumberPicker timeoutNumberPicker = (NumberPicker)findViewById(R.id.timeoutNumberPicker);
+		editor.putInt("timeoutNumberPicker", timeoutNumberPicker.getValue());
+
+
+		//experiment stats
 		 editor.putLong("mLastExperimentDuration", mLastExperimentDuration);
 		 editor.putFloat("mLastExperimentRMSE_X", mLastExperimentRMSE_X);
 		 editor.putFloat("mLastExperimentRMSE_Y", mLastExperimentRMSE_Y);
@@ -1174,8 +1203,14 @@ public class MainActivity extends Activity implements SensorEventListener{
 		}else{
 			error("error startExperiment()");
 		}
+
+		CheckBox timeoutCheckBox = (CheckBox)findViewById(R.id.timeoutCheckBox);
+		NumberPicker timeoutNumberPicker = (NumberPicker)findViewById(R.id.timeoutNumberPicker);
+		if(timeoutCheckBox.isChecked()){
+			mHandler.postDelayed(timeout,(timeoutNumberPicker.getValue()*1000));
+		}
 	}
-	
+
 	private void stopExperiment(){
 		if (mInstability != null){
 			mInstability.stopExperiment();
@@ -1305,6 +1340,56 @@ public class MainActivity extends Activity implements SensorEventListener{
 	    CheckBox flatPositionCheckBox = (CheckBox)findViewById(R.id.flatPositionCheckBox);
 	    flatPositionCheckBox.setChecked(false);//disable checkbox
 	}
-	
-	
+
+
+	void endDialog(){
+
+		//call onPause+onResume to stop/save experiment and restart new
+		onPause();
+		onResume();
+
+		AlertDialog alert = new AlertDialog.Builder(this)
+				.setMessage( "" )
+				.setTitle("End. Thanks!")
+				.setPositiveButton("Ok",
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int whichButton){
+								/*finish();*/
+							}
+						})
+				.setOnCancelListener(new DialogInterface.OnCancelListener() {
+					public void onCancel(DialogInterface dialog) {
+						/*finish();*/
+					}
+				})
+				.create();
+		alert.setCancelable(false);
+		alert.setCanceledOnTouchOutside(false);
+		alert.show();
+
+		vibrate();
+	}
+
+	void vibrate() {
+		Vibrator v;
+
+		// Get instance of vibrator from current Context
+		try {
+			v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+			v.vibrate(1000);
+		} catch (Exception e) {
+			error("failed to get vibrator: " + e.getMessage());//toast error
+		}
+	}
+
+
+	private Runnable timeout = new Runnable() {
+		@Override
+		public void run() {
+			endDialog();
+		}
+	};
+
+
+
 }
