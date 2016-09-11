@@ -68,6 +68,7 @@ import android.widget.Toast;
 //1			Oct, 2014		Michael Krause		initial
 //1.1		Aug, 2016		Michael Krause		added live view RMSE
 //1.2		Sept,2016		Michael Krause		added timeout/timelimit
+//1.2.1		Sept,2016		Michael Krause		set CONTROL_LIMIT to 100; ROLL_TH & PITCH_TH to 0; added some comments
 //------------------------------------------------------
 
 /*
@@ -146,13 +147,13 @@ public class MainActivity extends Activity implements SensorEventListener{
 		 public static final int MIN_X = -RANGE;
 		 public static final int MAX_Y = +RANGE;
 		 public static final int MIN_Y = -RANGE;
-		 public static final double DISTURB_X = 1;
-		 public static final double DISTURB_Y = 1;		 
+		 public static final double DISTURB_X = 1;//initially when starting the cross is NOT set to (0|0) this would be the stable point; we disturb a little bit therefore (1|1)
+		 public static final double DISTURB_Y = 1;//initially when starting the cross is NOT set to (0|0) this would be the stable point; we disturb a little bit therefore (1|1)
 
 
-		 public static final double ROLL_TH = 2.0f;//angle threshold below this threshold user inputs are ignored
-		 public static final double PITCH_TH = 2.0f;//angle threshold below this threshold user inputs are ignored
-		 public static final double CONTROL_LIMIT = 12;//maximum for control input above and below is capped
+		 public static final double ROLL_TH = 0.0f;//angle threshold below this threshold user inputs are ignored
+		 public static final double PITCH_TH = 0.0f;//angle threshold below this threshold user inputs are ignored
+		 public static final double CONTROL_LIMIT = 100;//maximum for control input above and below (+/- CONTROL_LIMIT) is capped
 		 
 		 
 		 //getter/setter------------------------
@@ -309,7 +310,7 @@ public class MainActivity extends Activity implements SensorEventListener{
             ImageView temp = new ImageView(getBaseContext());
 
     	    /*
-    	    //swap visual indicators
+    	    //swap visual indicators also, when swap cheboxes are enabled
     	    CheckBox swapCheckBox = (CheckBox)findViewById(R.id.swapCheckBox);
     	    CheckBox invertXCheckBox = (CheckBox)findViewById(R.id.invertXCheckBox);
     	    CheckBox invertYCheckBox = (CheckBox)findViewById(R.id.invertYCheckBox);
